@@ -24,7 +24,7 @@ exports.processWhatsAppPayload = async (payload) => {
 
     // Handle incoming messages
     if (change.messages && Array.isArray(change.messages)) {
-      await processMessages(change.messages, change.contacts || []);
+      await processMessages(change.messages, change.contacts || [], change.metadata || {});
     }
 
     // Handle status updates
@@ -37,12 +37,13 @@ exports.processWhatsAppPayload = async (payload) => {
   }
 };
 
-async function processMessages(messages, contacts) {
+async function processMessages(messages, contacts, metadata) {
   console.log(`Processing ${messages.length} messages`);
   
   for (let i = 0; i < messages.length; i++) {
     const msg = messages[i];
     const contact = contacts.find(c => c.wa_id === msg.from) || {};
+    const displayPhone = metadata.display_phone_number || 'Unknown';
 
     try {
       // Check if message already exists
@@ -55,7 +56,7 @@ async function processMessages(messages, contacts) {
       // Create new message
       const newMsg = new Message({
         from: msg.from,
-        to: contact.wa_id || 'Unknown',
+        to: displayPhone === msg.from ? contact.wa_id : displayPhone || 'Unknown',
         text: msg.text?.body || '',
         timestamp: new Date(Number(msg.timestamp) * 1000),
         status: 'sent',
