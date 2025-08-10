@@ -44,8 +44,9 @@ exports.postMessage = async (req, res) => {
   try {
     const { to, text } = req.body;
     const from = req.user.phone;
+    const senderName = req.user.name || 'Unknown';
 
-    const message = new Message({ from, to, text, timestamp: new Date(), status: 'sent' });
+    const message = new Message({ from, to, text, timestamp: new Date(), status: 'sent', senderName });
     await message.save();
     res.status(201).json(message);
   } catch (err) {
