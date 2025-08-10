@@ -11,9 +11,11 @@ const app = express();
 const server = http.createServer(app);
 require('./socket/socket')(server);
 
+// Middleware
 app.use(cors());
-app.use(express.json({ limit: '10mb' })); // Increase limit for large payloads
+app.use(express.json({ limit: '10mb' }));
 
+// Webhook route
 app.post('/webhook', async (req, res) => {
   try {
     console.log('Received webhook payload:', {
@@ -23,7 +25,7 @@ app.post('/webhook', async (req, res) => {
     });
 
     await processWhatsAppPayload(req.body);
-    
+
     console.log('Webhook processed successfully');
     res.sendStatus(200);
   } catch (error) {
@@ -32,17 +34,39 @@ app.post('/webhook', async (req, res) => {
   }
 });
 
-// Health check endpoint
+// Health check routes
+app.get('/', (req, res) => {
+  res.send('WhatsApp Web Clone Server is running 🚀');
+});
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
+// API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/messages', messageRoutes);
 
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => {
-    const PORT = process.env.PORT || 5000;
-    server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-  })
-  .catch(err => console.error(err));
+// Start server immediately for Render health check
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Server is running on port ${PORT}`);
+  connectToDB(); // Connect to DB after server starts
+});
+
+// Handle server errors
+server.on('error', (err) => {
+  console.error('❌ Server error:', err);
+  process.exit(1);
+});
+
+// MongoDB connection (non-blocking startup)
+async function connectToDB() {
+  try {
+    mongoose.set('autoIndex', false); // Avoid duplicate index in production
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log('✅ MongoDB connected');
+  } catch (err) {
+    console.error('❌ MongoDB connection failed:', err);
+    // Don't exit immediately — allow health checks to pass
+  }
+}
