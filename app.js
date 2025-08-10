@@ -9,7 +9,10 @@ const { processWhatsAppPayload } = require('./utils/payloadProcessor');
 
 const app = express();
 const server = http.createServer(app);
-require('./socket/socket')(server);
+const io = require('./socket/socket')(server);
+
+// Make io instance available to controllers
+app.locals.io = io;
 
 // Middleware
 app.use(cors());
